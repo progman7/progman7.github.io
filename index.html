@@ -2358,17 +2358,22 @@
 
       function showLoader(id, cb, delay) {
         var el = document.getElementById(id);
-        el.classList.add("on");
-        requestAnimationFrame(function () {
-          requestAnimationFrame(function () {
-            el.classList.add("visible");
-          });
-        });
+        // 1. Показываем лоадер мгновенно (без transition) — он перекрывает текущий экран
+        el.style.transition = "none";
+        el.classList.add("on", "visible");
+        // Принудительный reflow — браузер рисует лоадер прямо сейчас
+        void el.offsetHeight;
+        // Возвращаем transition только для последующего fade-out
+        el.style.transition = "";
+
+        // 2. Рендерим новый контент ПОД лоадером — пользователь ничего не видит
+        cb();
+
+        // 3. После задержки плавно убираем лоадер — контент уже готов
         setTimeout(function () {
           el.classList.remove("visible");
           setTimeout(function () {
             el.classList.remove("on");
-            cb();
           }, 250);
         }, delay);
       }
