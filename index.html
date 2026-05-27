@@ -797,13 +797,40 @@
       .rp-tabs {
         background: var(--white);
         display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 10px 14px 9px;
+        align-items: stretch;
         border-bottom: 1px solid var(--gray4);
         top: 60px;
         z-index: 50;
       }
+      .rp-tabs-left {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 14px;
+        border-right: 1px solid var(--gray4);
+        flex-shrink: 0;
+        pointer-events: none;
+        user-select: none;
+      }
+      .rp-tabs-left svg {
+        width: 16px;
+        height: 16px;
+        stroke: var(--gray3);
+        fill: none;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .rp-tabs-right {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 10px 10px 9px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+      .rp-tabs-right::-webkit-scrollbar { display: none; }
       .rp-tab {
         padding: 7px 12px;
         font-size: 13px;
@@ -818,13 +845,7 @@
         display: flex;
         align-items: center;
         gap: 5px;
-      }
-      .rp-tab svg {
-        width: 13px;
-        height: 13px;
-        stroke: currentColor;
-        fill: none;
-        stroke-width: 2;
+        flex-shrink: 0;
       }
       .rp-tab.active {
         background: var(--gray5);
@@ -1650,19 +1671,21 @@
       </div>
 
       <div class="rp-tabs">
-        <button class="rp-tab active">
+        <div class="rp-tabs-left">
           <svg viewBox="0 0 24 24">
             <line x1="3" y1="6" x2="21" y2="6" />
             <line x1="3" y1="12" x2="21" y2="12" />
             <line x1="3" y1="18" x2="21" y2="18" />
-            <circle cx="7" cy="6" r="2" fill="currentColor" stroke="none" />
-            <circle cx="17" cy="12" r="2" fill="currentColor" stroke="none" />
-            <circle cx="11" cy="18" r="2" fill="currentColor" stroke="none" />
+            <circle cx="7" cy="6" r="2" fill="var(--gray3)" stroke="none" />
+            <circle cx="17" cy="12" r="2" fill="var(--gray3)" stroke="none" />
+            <circle cx="11" cy="18" r="2" fill="var(--gray3)" stroke="none" />
           </svg>
-          Отправление
-        </button>
-        <button class="rp-tab">Подешевле</button>
-        <button class="rp-tab">Побыстрее</button>
+        </div>
+        <div class="rp-tabs-right">
+          <button class="rp-tab active">Отправление</button>
+          <button class="rp-tab">Подешевле</button>
+          <button class="rp-tab">Побыстрее</button>
+        </div>
       </div>
 
       <div class="cards-wrap">
