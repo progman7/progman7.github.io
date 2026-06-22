@@ -92,7 +92,7 @@
     display:flex;
     align-items:center;
     justify-content:center;
-    padding:max(12px, env(safe-area-inset-top)) 20px 16px;
+    padding:max(12px, env(safe-area-inset-top, 0px)) 20px 16px;
   }
   .header h1{ font-size:18px; font-weight:700; color:#fff; }
   .filter-btn{
@@ -218,7 +218,11 @@
   /* input row */
   .input-row{
     display:flex; align-items:center; gap:10px;
-    padding:8px 14px max(22px, env(safe-area-inset-bottom));
+    /* env() обязательно с явным фолбэком вторым аргументом: если эту
+       переменную окружения не определят, max(...) целиком станет
+       невалидным и весь нижний паддинг обнулится — именно так и
+       "уезжает под подбородок". С фолбэком такого не случится. */
+    padding:8px 14px max(22px, env(safe-area-inset-bottom, 0px));
     flex-shrink:0;
   }
   .input-avatar{
