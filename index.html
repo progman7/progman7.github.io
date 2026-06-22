@@ -79,12 +79,12 @@
       align-items:flex-end;
       /* "Ролик" под шторкой — просто другой цвет/градиент фона body,
          виден только в той полоске сверху, которую не закрывает .phone. */
-      background:radial-gradient(120% 90% at 50% 0%, #2c2630 0%, #16141b 55%, #0a0910 100%);
+      background:#1c1c1e;
     }
     .phone{
       width:100%;
       /* Полоска "ролика" сверху = статус-бар + ещё немного для вида. */
-      height:calc(100% - env(safe-area-inset-top, 0px) - 12px);
+      height:calc(100% - env(safe-area-inset-top, 0px) - 4px);
       border-radius:16px 16px 0 0;
       box-shadow:0 -16px 40px rgba(0,0,0,.45);
     }
