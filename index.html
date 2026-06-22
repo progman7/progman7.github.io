@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Комментарии</title>
 <style>
   :root{
@@ -17,6 +17,13 @@
     height:100%;
     background:#0e0e10;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    overscroll-behavior:none;
+    /* pan-y (а не manipulation) — manipulation формально РАЗРЕШАЕТ pinch-zoom,
+       просто отключает двойной тап. pan-y отключает и pinch-zoom, и даблтап,
+       оставляя только вертикальный скролл (который ниже разрешён точечно
+       только внутри .comments). */
+    touch-action:pan-y;
+    -webkit-text-size-adjust:100%;
   }
   /* На устройствах Apple эмодзи будут рисоваться нативным шрифтом Apple Color Emoji.
      На Windows/Android/Linux браузер всё равно подставит свой системный набор —
@@ -30,6 +37,10 @@
     justify-content:center;
     align-items:center;
     min-height:100vh;
+    overflow:hidden;
+    position:fixed;
+    inset:0;
+    width:100%;
   }
 
   .phone{
@@ -66,6 +77,9 @@
     flex:1;
     overflow-y:auto;
     padding:0 16px 10px;
+    overscroll-behavior-y:contain;
+    -webkit-overflow-scrolling:touch;
+    touch-action:pan-y;
   }
   .comments::-webkit-scrollbar{ width:4px; }
   .comments::-webkit-scrollbar-thumb{ background:#333; border-radius:2px; }
@@ -511,6 +525,31 @@
 </div>
 
 <script>
+  // Защита от случайного зума и скролла страницы.
+
+  // 1) Pinch-zoom через жесты Safari (iOS/iPadOS, а также трекпад на Mac).
+  document.addEventListener('gesturestart', e => e.preventDefault());
+  document.addEventListener('gesturechange', e => e.preventDefault());
+  document.addEventListener('gestureend', e => e.preventDefault());
+
+  // 2) Pinch-zoom на Android (там событий gesturestart нет вообще — это чисто
+  //    WebKit-история, п.1 их не ловит) + перетаскивание/скролл фона, шапки
+  //    и нижней панели: скроллить можно только сам список комментариев.
+  //    Двойной тап намеренно не трогаем здесь — его уже гасит touch-action
+  //    в CSS, а перехват через JS сломал бы тапы по лайкам/кнопкам.
+  document.addEventListener('touchmove', e => {
+    if (e.touches.length > 1){ e.preventDefault(); return; } // pinch (2+ пальца)
+    const t = e.target;
+    if (t.closest('.comments') || t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') return;
+    e.preventDefault();
+  }, { passive:false });
+
+  // 3) Zoom на десктопе: Ctrl+колесо мыши и pinch на трекпаде (браузер
+  //    репортит его как wheel-событие с ctrlKey=true).
+  window.addEventListener('wheel', e => {
+    if (e.ctrlKey) e.preventDefault();
+  }, { passive:false });
+
   // --- Лайки ---
   function toggleLike(col){
     const liked = col.classList.toggle('liked');
