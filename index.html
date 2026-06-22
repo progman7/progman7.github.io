@@ -85,7 +85,7 @@
       width:100%;
       /* Полоска "ролика" сверху = статус-бар + ещё немного для вида. */
       height:calc(100% - env(safe-area-inset-top, 0px) - 4px);
-      border-radius:16px 16px 0 0;
+      border-radius:28px 28px 0 0;
       box-shadow:0 -16px 40px rgba(0,0,0,.45);
     }
   }
@@ -231,7 +231,12 @@
        невалидным и весь нижний паддинг обнулится. max(12px, ...) —
        впритык к реальному "подбородку", без лишнего воздуха под ним,
        как в настоящих приложениях. */
-    padding:8px 14px max(12px, env(safe-area-inset-bottom, 20px));
+    /* Не полагаемся только на env() как на единственный источник — судя
+       по всему, в этом контексте (локальный файл + standalone) iOS не
+       всегда отдаёт реальное значение инсета. Поэтому гарантируем
+       минимум фиксированным числом, а env() прибавляем сверху как бонус
+       там, где он действительно работает. */
+    padding:8px 14px calc(34px + env(safe-area-inset-bottom, 0px));
     flex-shrink:0;
   }
   .input-avatar{
@@ -589,6 +594,20 @@
   window.addEventListener('wheel', e => {
     if (e.ctrlKey) e.preventDefault();
   }, { passive:false });
+
+  // 4) Клавиатура на iOS в режиме "как приложение" (standalone) не ужимает
+  //    страницу сама — она просто выезжает и закрывает нижнюю часть экрана
+  //    (а с ней и поле ввода с панелью подсказок). Поэтому вручную подгоняем
+  //    высоту body под реальную видимую область (visualViewport), чтобы
+  //    раскладка (flex) сама подвинула строку ввода выше клавиатуры.
+  if (window.visualViewport){
+    const syncViewportHeight = () => {
+      document.body.style.height = window.visualViewport.height + 'px';
+    };
+    window.visualViewport.addEventListener('resize', syncViewportHeight);
+    window.visualViewport.addEventListener('scroll', syncViewportHeight);
+    syncViewportHeight();
+  }
 
   // --- Лайки ---
   function toggleLike(col){
