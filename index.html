@@ -1,2443 +1,597 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
-    <title>Билеты на поезд</title>
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-        -webkit-tap-highlight-color: transparent;
-      }
-      :root {
-        --acc: #4b7b9c; 
-        --acc-dk: #375e78;
-        --acc-lt: #7aabca;
-        --acc-pal: #c1d9ea;
-        --acc-bg: #ebf3f8;
-        --gray: #354450; 
-        --gray2: #6b7c88; 
-        --gray3: #9eb0ba; 
-        --gray4: #cbd8df; 
-        --gray5: #eff3f5; 
-        --white: #ffffff;
-        --orange: #d4752a; 
-        --green: #27a65a; 
-      }
-      html {
-        height: 100%;
-      }
-      body {
-        font-family: -apple-system, "SF Pro Text", Helvetica, Arial, sans-serif;
-        background: var(--gray5);
-        color: var(--gray);
-        max-width: 430px;
-        margin: 0 auto;
-        min-height: 100%;
-        overflow-x: hidden;
-        -webkit-font-smoothing: antialiased;
-      }
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Комментарии</title>
+<style>
+  :root{
+    --bg:#000000;
+    --text:#ffffff;
+    --muted:#a8a8a8;
+    --divider:#262626;
+    --pill:#262626;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{
+    height:100%;
+    background:#0e0e10;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  /* На устройствах Apple эмодзи будут рисоваться нативным шрифтом Apple Color Emoji.
+     На Windows/Android/Linux браузер всё равно подставит свой системный набор —
+     шрифт Apple для эмодзи не лицензируется на других ОС. */
+  .emoji, .emoji-bar span{
+    font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;
+    font-style:normal;
+  }
+  body{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+  }
 
-      .scr {
-        display: none;
-        min-height: 100dvh;
-      }
-      .scr.on {
-        display: block;
-      }
-      .modal {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: var(--white);
-        z-index: 200;
-        overflow-y: auto;
-        max-width: 430px;
-        margin: 0 auto;
-      }
-      .modal.on {
-        display: block;
-      }
+  .phone{
+    width:390px;
+    height:780px;
+    background:var(--bg);
+    border-radius:34px;
+    overflow:hidden;
+    position:relative;
+    box-shadow:0 25px 70px rgba(0,0,0,.55);
+    display:flex;
+    flex-direction:column;
+  }
 
-      .hdr {
-        position: sticky;
-        top: 0;
-        z-index: 60;
-        background: var(--white);
-        display: flex;
-        align-items: stretch;
+  /* drag handle */
+  .handle-wrap{ display:flex; justify-content:center; padding:10px 0 4px; }
+  .handle{ width:36px; height:5px; border-radius:3px; background:#4a4a4a; }
 
-      }
-      .hdr-logo {
-        background: var(--acc);
-        width: 64px;
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 10px 0;
-      }
-      .logo-inner {
-        text-align: center;
-      }
-      .logo-inner svg {
-        display: block;
-        margin: 0 auto 3px;
-      }
-      .logo-name {
-        color: #fff;
-        font-size: 10.5px;
-        font-weight: 900;
-        letter-spacing: 2.5px;
-        text-transform: uppercase;
-      }
-      .hdr-nav {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 16px;
-        padding: 0 14px;
-      }
-      .hdr-btn {
-        background: none;
-        border: none;
-        cursor: pointer;
-        color: var(--gray2);
-        font-size: 14px;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 2px;
-        padding: 1px;
-      }
-      .hdr-btn svg {
-        width: 21px;
-        height: 21px;
-        stroke: var(--gray2);
-        fill: none;
-        stroke-width: 1.7;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
+  /* header */
+  .header{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:12px 20px 16px;
+  }
+  .header h1{ font-size:18px; font-weight:700; color:#fff; }
+  .filter-btn{
+    position:absolute; right:20px; top:50%; transform:translateY(-50%);
+  }
 
-      /* hero */
-      .hero {
-        position: relative;
-        height: 200px;
-        overflow: hidden;
-        background: linear-gradient(160deg, #243848 0%, #2e556e 35%, #38728f 65%, #4281a0 100%);
-      }
-      .hero::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: radial-gradient(ellipse 120px 80px at 15% 30%, rgba(80, 150, 90, 0.22) 0%, transparent 70%),
-          radial-gradient(ellipse 90px 60px at 70% 15%, rgba(60, 130, 75, 0.18) 0%, transparent 70%),
-          radial-gradient(ellipse 70px 50px at 50% 60%, rgba(50, 110, 65, 0.15) 0%, transparent 70%),
-          radial-gradient(ellipse 50px 40px at 85% 50%, rgba(40, 100, 55, 0.12) 0%, transparent 70%),
-          radial-gradient(ellipse 100px 70px at 30% 80%, rgba(70, 140, 85, 0.16) 0%, transparent 70%);
-      }
-      .hero::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: radial-gradient(circle 3px at 18% 25%, rgba(255, 255, 255, 0.25) 0%, transparent 100%),
-          radial-gradient(circle 2px at 45% 18%, rgba(255, 255, 255, 0.2) 0%, transparent 100%),
-          radial-gradient(circle 2px at 72% 35%, rgba(255, 255, 255, 0.18) 0%, transparent 100%),
-          radial-gradient(circle 3px at 85% 22%, rgba(255, 255, 255, 0.22) 0%, transparent 100%),
-          radial-gradient(circle 2px at 60% 55%, rgba(255, 255, 255, 0.15) 0%, transparent 100%),
-          radial-gradient(circle 2px at 25% 65%, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
-      }
-      .hero-txt {
-        position: absolute;
-        bottom: 18px;
-        left: 16px;
-        right: 16px;
-        z-index: 2;
-      }
-      .hero-r1 {
-        display: flex;
-        align-items: center;
-        margin-bottom: 4px;
-      }
-      .hero-pill {
-        background: var(--acc);
-        color: #fff;
-        font-size: 22px;
-        font-weight: 900;
-        padding: 2px 9px;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-        line-height: 1.4;
-      }
-      .hero-comma {
-        color: #fff;
-        font-size: 22px;
-        font-weight: 900;
-        margin-left: 1px;
-      }
-      .hero-r2 {
-        color: rgba(255, 255, 255, 0.93);
-        font-size: 22px;
-        font-weight: 900;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-        line-height: 1.25;
-      }
+  /* comments list */
+  .comments{
+    flex:1;
+    overflow-y:auto;
+    padding:0 16px 10px;
+  }
+  .comments::-webkit-scrollbar{ width:4px; }
+  .comments::-webkit-scrollbar-thumb{ background:#333; border-radius:2px; }
 
-      .sc {
-        background: var(--white);
-        box-shadow: 0 4px 20px rgba(55, 94, 120, 0.13);
-      }
-      .sc-tabs {
-        display: flex;
-        border-bottom: 1px solid var(--gray4);
-      }
-      .sc-tab {
-        flex: 1;
-        padding: 13px;
-        text-align: center;
-        font-size: 13px;
-        font-weight: 700;
-        letter-spacing: 0.8px;
-        text-transform: uppercase;
-        cursor: pointer;
-        border: none;
-        background: none;
-        color: var(--gray3);
-        transition: all 0.2s;
-      }
-      .sc-tab.on {
-        background: var(--acc);
-        color: #fff;
-      }
-      .sc-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        border-bottom: 1px solid var(--gray4);
-      }
-      .sc-cell {
-        padding: 14px 14px 13px;
-        cursor: pointer;
-        border: none;
-        background: none;
-        text-align: left;
-        border-right: 1px solid var(--gray4);
-        transition: background 0.12s;
-        position: relative;
-      }
-      .sc-cell:last-child {
-        border-right: none;
-      }
-      .sc-cell:active {
-        background: var(--acc-bg);
-      }
-      .sc-val {
-        display: block;
-        font-size: 16px;
-        color: var(--gray);
-        font-weight: 400;
-      }
-      .sc-val.ph {
-        color: var(--gray3);
-      }
-      .sc-pax-row {
-        display: flex;
-        align-items: center;
-        gap: 11px;
-        padding: 12px 14px;
-        border-bottom: 1px solid var(--gray4);
-        cursor: pointer;
-        transition: background 0.12s;
-      }
-      .sc-pax-row:active {
-        background: var(--acc-bg);
-      }
-      .pax-circle {
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        background: var(--gray5);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-      }
-      .pax-circle svg {
-        width: 16px;
-        height: 16px;
-        stroke: var(--gray3);
-        fill: none;
-        stroke-width: 1.7;
-      }
-      .pax-txt {
-        font-size: 16px;
-        color: var(--gray);
-      }
-      .sc-find {
-        width: 100%;
-        padding: 14px;
-        text-align: center;
-        font-size: 14px;
-        font-weight: 700;
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        cursor: pointer;
-        border: none;
-        transition:
-          background 0.2s,
-          color 0.2s;
-      }
-      .sc-find.off {
-        background: var(--white);
-        color: var(--acc);
-      }
-      .sc-find.on {
-        background: var(--acc);
-        color: #fff;
-      }
+  .comment{
+    display:flex;
+    gap:12px;
+    padding:14px 0 8px;
+  }
 
-      .hm-news {
-        padding: 14px;
-        font-size: 13px;
-        line-height: 1.6;
-        color: var(--gray);
-        background: var(--white);
-        margin-top: 10px;
-      }
-      .hm-news a {
-        color: var(--acc);
-        font-weight: 600;
-        text-decoration: none;
-      }
-      .hm-body {
-        padding: 10px 0px 80px;
-        background: var(--gray5);
-      }
-      .hm-card {
-        background: var(--white);
-        padding: 14px;
-        margin-bottom: 10px;
-      }
-      .hm-card-hdr {
-        font-size: 18px;
-        font-weight: 700;
-        color: var(--gray);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 12px;
-        cursor: pointer;
-      }
-      .hm-card-arrow {
-        color: var(--acc);
-        font-size: 17px;
-      }
-      .hm-item {
-        padding: 10px 0;
-        border-top: 1px solid var(--gray5);
-        font-size: 14px;
-        color: var(--gray2);
-        line-height: 1.5;
-      }
-      .hm-item b {
-        display: block;
-        color: var(--gray);
-        font-weight: 600;
-        margin-bottom: 1px;
-      }
-      .hm-item small {
-        font-size: 12px;
-        color: var(--gray3);
-      }
+  .avatar{
+    width:44px; height:44px; border-radius:50%; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    background:#3a3a3c;
+    position:relative;
+  }
+  .avatar svg{ width:60%; height:60%; }
+  .avatar.ring{
+    background:linear-gradient(45deg,#f7c844,#e0345a,#6e2bd8);
+    padding:2px;
+  }
+  .avatar.ring .inner{
+    width:100%; height:100%; border-radius:50%;
+    background:#3a3a3c;
+    display:flex; align-items:center; justify-content:center;
+    border:2px solid #000;
+  }
+  .avatar.ring .inner svg{ width:55%; height:55%; }
 
+  .col{ flex:1; min-width:0; }
 
+  .row-top{ display:flex; align-items:flex-start; }
+  .col-text{ flex:1; min-width:0; padding-right:10px; }
 
-      .m-sticky {
-        position: sticky;
-        top: 0;
-        z-index: 5;
-        background: var(--white);
-        border-bottom: 1px solid var(--gray4);
-      }
-      .m-hdr {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 8px;
-        padding: 16px 14px 12px;
-      }
-      .m-hint {
-        font-size: 14px;
-        color: var(--gray2);
-        line-height: 1.4;
-        flex: 1;
-      }
-      .m-x {
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-size: 19px;
-        color: var(--gray3);
-        width: 28px;
-        height: 28px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .ci-wrap {
-        padding: 12px 14px 8px;
-        position: relative;
-      }
-      .ci {
-        width: 100%;
-        border: 2px solid var(--acc);
-        border-radius: 6px;
-        padding: 11px 40px 11px 13px;
-        font-size: 16px;
-        color: var(--gray);
-        outline: none;
-        background: var(--white);
-      }
-      .ci::placeholder {
-        color: var(--gray3);
-      }
-      .ci-x {
-        position: absolute;
-        right: 24px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: none;
-        border: none;
-        cursor: pointer;
-        color: var(--gray3);
-        font-size: 15px;
-        width: 24px;
-        height: 24px;
-        display: none;
-        align-items: center;
-        justify-content: center;
-      }
-      .ci-x.show {
-        display: flex;
-      }
-      .ci-sec {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px 14px;
-        font-size: 11px;
-        color: var(--gray3);
-        letter-spacing: 0.3px;
-      }
-      .ci-sec::after {
-        content: "";
-        flex: 1;
-        height: 1px;
-        background: var(--gray4);
-      }
-      .ci-sec svg {
-        width: 13px;
-        height: 13px;
-        flex-shrink: 0;
-      }
-      .ci-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 11px 14px;
-        cursor: pointer;
-        border-bottom: 1px solid var(--gray5);
-        transition: background 0.1s;
-      }
-      .ci-item:active {
-        background: var(--acc-bg);
-      }
-      .ci-ico {
-        width: 22px;
-        height: 22px;
-        flex-shrink: 0;
-      }
-      .ci-name {
-        font-size: 15px;
-        color: var(--gray);
-      }
-      .ci-name .hl {
-        color: var(--acc);
-        font-weight: 600;
-      }
-      .ci-sub {
-        font-size: 12px;
-        color: var(--gray3);
-        margin-top: 1px;
-      }
+  .meta{ display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+  .username{ font-size:14.5px; font-weight:600; color:#fff; }
+  .time{ font-size:13px; color:var(--muted); margin-left:1px; }
 
-      .dm-sticky {
-        position: sticky;
-        top: 0;
-        z-index: 5;
-        background: var(--white);
-        border-bottom: 1px solid var(--gray4);
-      }
-      .dm-hdr {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 16px 14px 12px;
-      }
-      .dm-title {
-        font-size: 17px;
-        font-weight: 700;
-        color: var(--gray);
-      }
-      .dm-fields {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-        padding: 10px 14px 12px;
-      }
-      .df {
-        border: 1.5px solid var(--gray4);
-        border-radius: 6px;
-        padding: 9px 11px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        min-height: 42px;
-        cursor: pointer;
-        transition:
-          border-color 0.15s,
-          background 0.15s;
-      }
-      .df.af {
-        border-color: var(--acc);
-        background: var(--acc-bg);
-      }
-      .df.filled {
-        border-color: var(--gray4);
-      }
-      .df-v {
-        font-size: 14px;
-        color: var(--gray3);
-      }
-      .df.filled .df-v {
-        color: var(--gray);
-      }
-      .df-x {
-        background: none;
-        border: none;
-        cursor: pointer;
-        color: var(--gray3);
-        font-size: 13px;
-        display: none;
-      }
-      .df-x.show {
-        display: block;
-      }
-      .cal-body {
-        padding: 0 12px 100px;
-        overflow-y: auto;
-      }
-      .mo-hd {
-        text-align: center;
-        font-size: 14px;
-        font-weight: 600;
-        color: var(--gray);
-        padding: 20px 0 8px;
-      }
-      .mo-divider {
-        height: 1px;
-        background: var(--gray4);
-        margin: 0 0 10px;
-      }
-      .wk-hdr {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-        text-align: center;
-        margin-bottom: 4px;
-      }
-      .wk-hdr span {
-        font-size: 11px;
-        color: var(--gray3);
-        padding: 2px 0;
-      }
-      .wk-hdr span.we {
-        color: var(--acc);
-      }
-      .cal-g {
-        display: grid;
-        grid-template-columns: repeat(7, 1fr);
-      }
-      .cd {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-height: 46px;
-        cursor: pointer;
-      }
-      .cd.past {
-        pointer-events: none;
-      }
-      .cdi {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        transition: background 0.15s;
-      }
-      .cd:not(.past):active .cdi:not(.sel) {
-        background: var(--acc-bg);
-      }
-      .cdi.sel {
-        background: var(--acc);
-      }
-      .cdi.rng {
-        background: rgba(75, 123, 156, 0.12);
-        border-radius: 0;
-      }
-      .dn {
-        font-size: 15px;
-        font-weight: 600;
-        color: var(--gray);
-      }
-      .dn.dim {
-        font-weight: 400;
-        color: var(--gray4);
-      }
-      .dn.we {
-        color: var(--acc);
-      }
-      .dn.sel {
-        color: #fff;
-      }
-      .dp {
-        font-size: 8px;
-        color: var(--green);
-        line-height: 1;
-        margin-top: 1px;
-      }
-      .dp.sel {
-        color: #fff;
-      }
-      .cbtn {
-        position: fixed;
-        bottom: 0;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 100%;
-        max-width: 430px;
-        background: var(--acc);
-        color: #fff;
-        font-size: 13px;
-        font-weight: 700;
-        letter-spacing: 1.2px;
-        text-transform: uppercase;
-        padding: 15px;
-        text-align: center;
-        cursor: pointer;
-        border: none;
-        display: none;
-        z-index: 10;
-        box-shadow: 0 -3px 20px rgba(75, 123, 156, 0.3);
-      }
+  .text{
+    font-size:14.5px; color:#fff; line-height:1.42;
+    margin-top:4px; word-wrap:break-word;
+  }
+  .text + .text{ margin-top:10px; }
 
-      .rp-hdr {
-        background: var(--acc);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 13px 16px;
-        position: sticky;
-        top: 0;
-        z-index: 60;
-      }
-      .rp-login {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        color: #fff;
-        font-size: 14px;
-        font-weight: 500;
-        background: none;
-        border: none;
-        cursor: pointer;
-      }
-      .rp-login svg {
-        width: 16px;
-        height: 16px;
-        stroke: #fff;
-        fill: none;
-        stroke-width: 2;
-        stroke-linecap: round;
-      }
-      .rp-center {
-        flex: 1;
-        text-align: center;
-        color: #fff;
-        font-size: 15px;
-        font-weight: 700;
-        letter-spacing: 0.5px;
-      }
-      .rp-burger {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        background: none;
-        border: none;
-        cursor: pointer;
-        padding: 4px;
-      }
-      .rp-burger span {
-        display: block;
-        width: 20px;
-        height: 2px;
-        background: #fff;
-        border-radius: 2px;
-      }
-      .rp-home-btn {
-        background: none;
-        border: none;
-        cursor: pointer;
-        padding: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 4px;
-        opacity: 0.9;
-        transition: opacity 0.15s;
-      }
-      .rp-home-btn:active {
-        opacity: 0.6;
-      }
+  .actions{ display:flex; gap:18px; margin-top:9px; }
+  .reply-btn{ font-size:13px; color:var(--muted); font-weight:600; }
 
-      .rt-bar {
-        background: var(--white);
-        padding: 11px 14px 12px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        border-bottom: 1px solid var(--gray4);
-      }
-      .rt-title {
-        font-size: 17px;
-        font-weight: 700;
-        color: var(--gray);
-      }
-      .rt-date {
-        font-size: 13px;
-        color: var(--gray2);
-        margin-top: 1px;
-      }
-      .rt-right {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-      .rt-pax {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        font-size: 15px;
-        color: var(--gray);
-        background: none;
-        border: none;
-        cursor: pointer;
-      }
-      .rt-pax svg {
-        width: 20px;
-        height: 20px;
-        stroke: var(--gray3);
-        fill: none;
-        stroke-width: 1.5;
-      }
-      .rt-search {
-        background: none;
-        border: none;
-        cursor: pointer;
-      }
-      .rt-search svg {
-        width: 21px;
-        height: 21px;
-        stroke: var(--gray);
-        fill: none;
-        stroke-width: 1.8;
-      }
+  .view-replies{
+    display:flex; align-items:center; gap:10px;
+    margin-top:11px; color:var(--muted); font-size:13px; font-weight:600;
+  }
+  .view-replies .line{ width:24px; height:1px; background:#3a3a3a; flex-shrink:0; }
 
-      .htl-row {
-        background: var(--white);
-        padding: 10px 14px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 14px;
-        border-bottom: 1px solid var(--gray4);
-      }
-      .htl-row input[type="checkbox"] {
-        width: 16px;
-        height: 16px;
-        accent-color: var(--acc);
-        flex-shrink: 0;
-      }
-      .htl-row label {
-        cursor: pointer;
-      }
-      .htl-row a {
-        color: var(--acc);
-        font-weight: 600;
-        text-decoration: none;
-      }
+  .like-col{
+    display:flex; flex-direction:column; align-items:center; gap:5px;
+    padding-top:3px; flex-shrink:0; cursor:pointer; user-select:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .like-count{ font-size:12px; color:var(--muted); }
+  .like-col.liked .like-count{ color:#ed4956; }
+  @keyframes heartPop{
+    0%{ transform:scale(1); }
+    35%{ transform:scale(1.35); }
+    100%{ transform:scale(1); }
+  }
+  .heart-icon.pop{ animation:heartPop .28s ease; }
 
-      .rp-tabs {
-        background: var(--white);
-        display: flex;
-        align-items: stretch;
-        border-bottom: 1px solid var(--gray4);
-        top: 60px;
-        z-index: 50;
-      }
-      .rp-tabs-left {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0 14px;
-        border-right: 1px solid var(--gray4);
-        flex-shrink: 0;
-        pointer-events: none;
-        user-select: none;
-      }
-      .rp-tabs-left svg {
-        width: 16px;
-        height: 16px;
-        stroke: var(--gray3);
-        fill: none;
-        stroke-width: 2;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
-      .rp-tabs-right {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        padding: 10px 10px 9px;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-      }
-      .rp-tabs-right::-webkit-scrollbar { display: none; }
-      .rp-tab {
-        padding: 7px 12px;
-        font-size: 13px;
-        font-weight: 500;
-        color: var(--gray2);
-        background: none;
-        border: none;
-        cursor: pointer;
-        border-radius: 20px;
-        white-space: nowrap;
-        transition: all 0.15s;
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        flex-shrink: 0;
-      }
-      .rp-tab.active {
-        background: var(--gray5);
-        color: var(--acc);
-        font-weight: 600;
-      }
+  /* GIF-вложение в комментарии (анимация "бесится") */
+  .gif-attachment{
+    position:relative;
+    width:168px; height:130px;
+    margin-top:8px;
+    border-radius:10px;
+    overflow:hidden;
+    background:radial-gradient(circle at 50% 28%, #3a0d0d 0%, #150404 75%);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .gif-tag{
+    position:absolute; top:6px; left:6px; z-index:2;
+    background:rgba(0,0,0,.65); color:#fff;
+    font-size:9.5px; font-weight:800; letter-spacing:.3px;
+    padding:2px 5px; border-radius:4px;
+  }
+  .rage-face{ width:62%; height:62%; animation:rageShake .35s infinite; }
+  @keyframes rageShake{
+    0%{ transform:translate(0,0) rotate(0deg); }
+    20%{ transform:translate(-3px,1px) rotate(-3deg); }
+    40%{ transform:translate(3px,-1px) rotate(3deg); }
+    60%{ transform:translate(-2px,2px) rotate(-2deg); }
+    80%{ transform:translate(2px,-2px) rotate(2deg); }
+    100%{ transform:translate(0,0) rotate(0deg); }
+  }
 
-      .cards-wrap {
-        padding: 12px 0px 120px;
-      }
+  /* emoji bar */
+  .emoji-bar{
+    display:flex; justify-content:space-between;
+    padding:10px 16px 8px;
+    border-top:1px solid var(--divider);
+    font-size:23px;
+    flex-shrink:0;
+  }
+  .emoji-bar span{
+    line-height:1; cursor:pointer; user-select:none;
+    transition:transform .12s ease;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .emoji-bar span:active{ transform:scale(1.3); }
 
-      .tc {
-        background: var(--white);
-        overflow: hidden;
-        margin-bottom: 12px;
-        box-shadow:
-          0 1px 4px rgba(55, 94, 120, 0.09),
-          0 0 0 0.5px rgba(55, 94, 120, 0.06);
-      }
+  /* input row */
+  .input-row{
+    display:flex; align-items:center; gap:10px;
+    padding:8px 14px 22px;
+    flex-shrink:0;
+  }
+  .input-avatar{
+    width:30px; height:30px; border-radius:50%; flex-shrink:0;
+    background:#3a3a3c; display:flex; align-items:center; justify-content:center;
+  }
+  .input-avatar svg{ width:60%; height:60%; }
+  .input-pill{
+    flex:1; background:#262626; border:none; outline:none; border-radius:18px;
+    padding:9px 14px; color:#fff; font-size:14px; font-family:inherit;
+    min-width:0;
+  }
+  .input-pill::placeholder{ color:#8e8e8e; }
+  .icon-btn{ flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+  .gif-badge{
+    border:1.5px solid #8e8e8e; border-radius:5px;
+    font-size:10px; font-weight:800; color:#8e8e8e;
+    padding:2px 5px; letter-spacing:0.2px;
+  }
+  .media-icons{ display:flex; align-items:center; gap:14px; flex-shrink:0; }
+  .post-btn{
+    display:none; flex-shrink:0; background:none; border:none;
+    color:#3897f0; font-size:14px; font-weight:600; font-family:inherit;
+    cursor:pointer; padding:4px 2px;
+  }
+  .post-btn:disabled{ color:#1c5f93; cursor:default; }
+</style>
+</head>
+<body>
 
-      .tc-fpk {
-        display: inline-block;
-        border: 1px solid var(--gray4);
-        border-radius: 4px;
-        font-size: 10px;
-        font-weight: 600;
-        color: var(--gray2);
-        letter-spacing: 0.3px;
-        padding: 2px 7px;
-        margin: 12px 12px 0;
-        background: var(--gray5);
-      }
+<div class="phone">
 
-      .tc-numrow {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 12px 8px;
-      }
-      .tc-numrow svg {
-        width: 26px;
-        height: 18px;
-        color: var(--acc);
-      }
-      .tc-num {
-        font-size: 19px;
-        font-weight: 700;
-        color: var(--gray);
-      }
+  <div class="handle-wrap"><div class="handle"></div></div>
 
-      .tc-daterow {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0 12px 3px;
-        font-size: 12px;
-        color: var(--gray3);
-      }
-      .tc-dur {
-        text-align: center;
-        font-size: 11px;
-      }
-
-      .tc-timeroute {
-        display: flex;
-        align-items: center;
-        padding: 0 12px 6px;
-        gap: 6px;
-      }
-      .t-time {
-        font-size: 28px;
-        font-weight: 700;
-        letter-spacing: -1px;
-        color: var(--gray);
-        min-width: 76px;
-      }
-      .t-time.r {
-        text-align: right;
-      }
-      .t-route {
-        flex: 1;
-        display: flex;
-        align-items: center;
-      }
-      .t-routeline {
-        display: flex;
-        align-items: center;
-        width: 100%;
-      }
-      .t-rdot {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background: var(--acc);
-        flex-shrink: 0;
-      }
-      .t-rdash {
-        flex: 1;
-        height: 1.5px;
-        background: var(--acc-pal);
-      }
-      .t-rhead {
-        width: 0;
-        height: 0;
-        border-top: 5px solid transparent;
-        border-bottom: 5px solid transparent;
-        border-left: 8px solid var(--acc);
-        flex-shrink: 0;
-      }
-      .t-mbtn {
-        font-size: 10px;
-        color: var(--acc);
-        border: 1px solid var(--acc-pal);
-        background: var(--acc-bg);
-        border-radius: 20px;
-        padding: 3px 9px;
-        cursor: pointer;
-        margin: 0 4px;
-        white-space: nowrap;
-        font-weight: 500;
-        flex-shrink: 0;
-      }
-
-      .tc-stns {
-        display: flex;
-        justify-content: space-between;
-        padding: 0 12px 12px;
-      }
-      .st-l .stn {
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--gray);
-      }
-      .st-l .stop {
-        font-size: 11px;
-        color: var(--gray3);
-        margin-top: 3px;
-      }
-      .st-r {
-        text-align: right;
-      }
-      .st-r .sup {
-        font-size: 11px;
-        color: var(--gray3);
-      }
-      .st-r .stn {
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--gray);
-      }
-
-      .tc-div {
-        height: 1px;
-        background: var(--gray5);
-        margin: 0 12px;
-      }
-
-      .sr {
-        display: flex;
-        align-items: center;
-        padding: 11px 12px;
-        border-top: 1px solid var(--gray5);
-        cursor: pointer;
-        transition: background 0.1s;
-      }
-      .sr:active {
-        background: var(--acc-bg);
-      }
-      .sr-type {
-        flex: 1;
-        font-size: 14px;
-        color: var(--gray);
-      }
-      .sr-cnt {
-        font-size: 14px;
-        color: var(--gray3);
-        min-width: 32px;
-        text-align: right;
-        margin-right: 10px;
-      }
-      .sr-cnt.lo {
-        color: var(--orange);
-        font-weight: 700;
-      }
-      .sr-prc {
-        font-size: 14px;
-        font-weight: 700;
-        color: var(--acc);
-        white-space: nowrap;
-        margin-right: 4px;
-      }
-      .sr-chev svg {
-        width: 14px;
-        height: 14px;
-        stroke: var(--acc-lt);
-        fill: none;
-        stroke-width: 2.5;
-      }
-
-      .lo-badge {
-        font-size: 10px;
-        font-weight: 600;
-        color: var(--orange);
-        border: 1px solid rgba(212, 117, 42, 0.3);
-        border-radius: 3px;
-        background: rgba(212, 117, 42, 0.07);
-        padding: 1px 5px;
-        margin-right: 8px;
-        white-space: nowrap;
-      }
-
-      .sr.sold {
-        pointer-events: none;
-      }
-      .sr.sold .sr-type {
-        color: var(--gray3);
-      }
-      .sr.sold .sr-cnt {
-        color: var(--gray4);
-      }
-      .no-badge {
-        font-size: 10px;
-        font-weight: 700;
-        color: var(--acc-dk);
-        background: var(--acc-bg);
-        border: 1px solid var(--acc-pal);
-        border-radius: 3px;
-        padding: 2px 6px;
-        margin-right: 4px;
-        white-space: nowrap;
-      }
-
-      /* card footer */
-      .tc-footer {
-        display: flex;
-        gap: 8px;
-        padding: 11px 12px 12px;
-        border-top: 1px solid var(--gray5);
-      }
-      .btn-wl {
-        flex: 1;
-        border: 1.5px solid var(--gray4);
-        border-radius: 22px;
-        background: var(--white);
-        color: var(--gray2);
-        font-size: 13px;
-        font-weight: 500;
-        padding: 10px 8px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        transition: border-color 0.15s;
-      }
-      .btn-wl svg {
-        width: 14px;
-        height: 14px;
-        stroke: var(--gray2);
-        fill: none;
-        stroke-width: 2;
-      }
-      .btn-wl:active {
-        border-color: var(--acc);
-      }
-      .btn-buy {
-        flex: 1.2;
-        border: 1.5px solid var(--acc);
-        border-radius: 22px;
-        background: var(--white);
-        color: var(--acc);
-        font-size: 13px;
-        font-weight: 600;
-        padding: 10px 8px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        transition:
-          background 0.15s,
-          color 0.15s;
-      }
-      .btn-buy svg {
-        width: 14px;
-        height: 14px;
-        stroke: var(--acc);
-        fill: none;
-        stroke-width: 2;
-      }
-      .btn-buy:active {
-        background: var(--acc);
-        color: #fff;
-      }
-      .btn-buy:active svg {
-        stroke: #fff;
-      }
-      .btn-buy.dis {
-        border-color: var(--gray4);
-        color: var(--gray3);
-        pointer-events: none;
-        cursor: default;
-      }
-      .btn-buy.dis svg {
-        stroke: var(--gray3);
-      }
-
-      .fav {
-        background: var(--white);
-        padding: 14px;
-        box-shadow: 0 1px 4px rgba(55, 94, 120, 0.07);
-      }
-      .fav-hdr {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        font-size: 16px;
-        font-weight: 700;
-        color: var(--gray);
-        margin-bottom: 8px;
-      }
-      .fav-x {
-        font-size: 18px;
-        color: var(--gray3);
-        cursor: pointer;
-        background: none;
-        border: none;
-        line-height: 1;
-        padding: 0;
-      }
-      .fav-ul {
-        list-style: none;
-      }
-      .fav-ul li {
-        font-size: 13px;
-        color: var(--gray2);
-        padding: 3px 0 3px 13px;
-        position: relative;
-        line-height: 1.5;
-      }
-      .fav-ul li::before {
-        content: "·";
-        position: absolute;
-        left: 2px;
-        color: var(--acc);
-        font-weight: 900;
-      }
-      .fav-note {
-        font-size: 12px;
-        color: var(--gray3);
-        margin-top: 8px;
-      }
-      .fav-login-btn {
-        margin-top: 10px;
-        border: 1.5px solid var(--acc);
-        color: var(--acc);
-        border-radius: 8px;
-        padding: 7px 16px;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        background: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-      }
-
-      .filter-float {
-        position: fixed;
-        bottom: 46px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: var(--acc);
-        color: #fff;
-        font-size: 12px;
-        font-weight: 700;
-        letter-spacing: 0.6px;
-        padding: 11px 22px;
-        border-radius: 24px;
-        cursor: pointer;
-        z-index: 40;
-        display: flex;
-        align-items: center;
-        gap: 7px;
-        border: none;
-        box-shadow: 0 4px 18px rgba(75, 123, 156, 0.45);
-      }
-      .filter-float svg {
-        width: 15px;
-        height: 15px;
-        stroke: #fff;
-        fill: none;
-        stroke-width: 2;
-      }
-
-
-
-      .so-bg {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(30, 46, 56, 0.58);
-        z-index: 300;
-        align-items: flex-end;
-        justify-content: center;
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
-      }
-      .so-bg.on {
-        display: flex;
-      }
-      .so-sheet {
-        background: var(--white);
-        border-radius: 20px 20px 0 0;
-        width: 100%;
-        max-width: 430px;
-        padding: 20px 20px 48px;
-        animation: slideup 0.32s cubic-bezier(0.3, 1, 0.3, 1);
-      }
-      @keyframes slideup {
-        from {
-          transform: translateY(100%);
-        }
-        to {
-          transform: translateY(0);
-        }
-      }
-      .so-handle {
-        width: 36px;
-        height: 4px;
-        background: var(--gray4);
-        border-radius: 2px;
-        margin: 0 auto 22px;
-      }
-
-      .so-phase-check {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 20px 0 16px;
-        gap: 14px;
-      }
-      .so-spin {
-        width: 40px;
-        height: 40px;
-        border: 2.5px solid var(--gray4);
-        border-top-color: var(--acc);
-        border-radius: 50%;
-        animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-      }
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
-      .so-chk-txt {
-        font-size: 14px;
-        color: var(--gray2);
-      }
-
-      /* result state */
-      .so-phase-res {
-        display: none;
-      }
-      .so-phase-res.on {
-        display: block;
-      }
-      .so-icon-wrap {
-        width: 64px;
-        height: 64px;
-        background: var(--acc-bg);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 16px;
-      }
-      .so-icon-wrap svg {
-        width: 28px;
-        height: 28px;
-        stroke: var(--acc);
-        fill: none;
-        stroke-width: 1.8;
-      }
-      .so-title {
-        text-align: center;
-        font-size: 20px;
-        font-weight: 700;
-        color: var(--gray);
-        margin-bottom: 6px;
-      }
-      .so-sub {
-        text-align: center;
-        font-size: 14px;
-        color: var(--gray2);
-        line-height: 1.6;
-        margin-bottom: 20px;
-      }
-      .so-infobox {
-        background: var(--acc-bg);
-        border-radius: 10px;
-        padding: 14px 16px;
-        margin-bottom: 20px;
-        border: 1px solid var(--acc-pal);
-      }
-      .so-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 14px;
-        padding: 6px 0;
-        border-bottom: 1px solid var(--acc-pal);
-      }
-      .so-row:last-child {
-        border-bottom: none;
-      }
-      .so-lbl {
-        color: var(--gray2);
-      }
-      .so-val {
-        color: var(--gray);
-        font-weight: 500;
-      }
-      .so-btn-wl {
-        width: 100%;
-        background: var(--acc);
-        color: #fff;
-        border: none;
-        border-radius: 12px;
-        padding: 14px;
-        font-size: 15px;
-        font-weight: 600;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        margin-bottom: 10px;
-        transition: background 0.15s;
-      }
-      .so-btn-wl svg {
-        width: 17px;
-        height: 17px;
-        stroke: #fff;
-        fill: none;
-        stroke-width: 2;
-      }
-      .so-btn-wl:active {
-        background: var(--acc-dk);
-      }
-      .so-btn-back {
-        width: 100%;
-        background: var(--gray5);
-        color: var(--gray);
-        border: none;
-        border-radius: 12px;
-        padding: 14px;
-        font-size: 15px;
-        font-weight: 500;
-        cursor: pointer;
-      }
-
-      .g-loader {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(239, 243, 245, 0.96);
-        z-index: 500;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 20px;
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
-        opacity: 0;
-        transition: opacity 0.25s ease;
-      }
-      .g-loader.on {
-        display: flex;
-      }
-      .g-loader.visible {
-        opacity: 1;
-      }
-      .g-txt {
-        font-size: 11px;
-        font-weight: 900;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-        color: var(--gray3);
-        margin-top: 4px;
-      }
-
-      /* ── Page loader ── */
-      #page-loader {
-        position: fixed;
-        inset: 0;
-        background: var(--white);
-        z-index: 9999;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 0;
-        opacity: 1;
-        transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-      #page-loader.fade-out {
-        opacity: 0;
-        pointer-events: none;
-      }
-      .pl-ring-wrap {
-        position: relative;
-        width: 88px;
-        height: 88px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 20px;
-      }
-      .pl-ring {
-        position: absolute;
-        inset: 0;
-        animation: ringRotate 1.1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-      }
-      .pl-ring circle {
-        fill: none;
-        stroke-width: 3;
-        stroke-linecap: round;
-        stroke-dasharray: 200;
-        stroke-dashoffset: 150;
-        stroke: url(#ringGrad);
-        animation: ringDash 1.1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-      }
-      @keyframes ringRotate {
-        0%   { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-      @keyframes ringDash {
-        0%   { stroke-dashoffset: 195; }
-        50%  { stroke-dashoffset: 50; }
-        100% { stroke-dashoffset: 195; }
-      }
-      .pl-logo-box {
-        width: 54px;
-        height: 54px;
-        background: var(--acc);
-        border-radius: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      .pl-name {
-        font-size: 11px;
-        font-weight: 900;
-        letter-spacing: 3px;
-        text-transform: uppercase;
-        color: var(--gray3);
-        margin-top: 4px;
-      }
-      .pl-spin {
-        width: 42px;
-        height: 42px;
-        border: 2.5px solid var(--gray4);
-        border-top-color: var(--acc);
-        border-radius: 50%;
-        animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-      }
-    </style>
-  </head>
-  <body>
-    <!-- Page loader -->
-    <div id="page-loader">
-      <div class="pl-spin"></div>
+  <div class="header">
+    <h1>Комментарии</h1>
+    <div class="filter-btn">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M4 4h16l-6.2 8v6.5l-3.6 1.8V12z"/>
+      </svg>
     </div>
-    <div id="s-home" class="scr on">
-      <header class="hdr">
-        <div class="hdr-logo">
-          <div class="logo-inner">
-            <svg width="30" height="30" viewBox="0 0 30 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <!-- Cab body -->
-              <path d="M4 9 Q4 3 15 3 Q26 3 26 9 L27 24 Q27 26 25 26 L5 26 Q3 26 3 24 Z" stroke="white" stroke-width="1.4" fill="rgba(255,255,255,0.13)"/>
-              <!-- Left windshield -->
-              <rect x="5.5" y="5.5" width="8" height="8.5" rx="1.8" fill="white" fill-opacity="0.6"/>
-              <!-- Right windshield -->
-              <rect x="16.5" y="5.5" width="8" height="8.5" rx="1.8" fill="white" fill-opacity="0.6"/>
-              <!-- Center pillar -->
-              <rect x="14" y="5.5" width="2" height="8.5" fill="white" fill-opacity="0.18"/>
-              <!-- Headlights -->
-              <circle cx="8" cy="20" r="2.4" fill="white"/>
-              <circle cx="22" cy="20" r="2.4" fill="white"/>
-              <!-- Number plate -->
-              <rect x="11.5" y="17.5" width="7" height="4.5" rx="1" fill="white" fill-opacity="0.28"/>
-              <!-- Buffer beam -->
-              <rect x="9" y="25" width="12" height="2.5" rx="1" fill="white" fill-opacity="0.55"/>
-            </svg>
-            <div class="logo-name">КОЛЕЯ</div>
+  </div>
+
+  <div class="comments" id="commentsList">
+
+    <!-- Comment 1 -->
+    <div class="comment">
+      <div class="avatar">
+        <svg viewBox="0 0 24 24" fill="#9a9a9a"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+      </div>
+      <div class="col">
+        <div class="row-top">
+          <div class="col-text">
+            <div class="meta">
+              <span class="username">stas_minsk</span>
+              <span class="time">2 нед.</span>
+            </div>
+            <div class="text">Мда, даже доверить читать с листка нельзя 😅</div>
+            <div class="actions">
+              <span class="reply-btn">Ответить</span>
+            </div>
           </div>
-        </div>
-        <nav class="hdr-nav">
-          <button class="hdr-btn">Рус&thinsp;<span style="font-size: 25px">▾</span></button>
-          <button class="hdr-btn">
-            <svg viewBox="0 0 24 24">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-          </button>
-          <button class="hdr-btn">
-            <svg viewBox="0 0 24 24">
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
-          </button>
-        </nav>
-      </header>
-
-      <div class="hero">
-        <div class="hero-txt">
-          <div class="hero-r1"><span class="hero-pill">КУПИТЬ БИЛЕТ</span><span class="hero-comma">,</span></div>
-          <div class="hero-r2">ПОСМОТРЕТЬ</div>
-          <div class="hero-r2">РАСПИСАНИЕ</div>
-        </div>
-      </div>
-
-      <div class="sc">
-        <div class="sc-tabs">
-          <button class="sc-tab on" onclick="swTab(this)">БИЛЕТЫ</button>
-          <button class="sc-tab" onclick="swTab(this)">ОТЕЛИ</button>
-        </div>
-        <div class="sc-row">
-          <button class="sc-cell" onclick="openCity('from')">
-            <span class="sc-val ph" id="v-from">Откуда</span>
-          </button>
-          <button class="sc-cell" onclick="openCity('to')">
-            <span class="sc-val ph" id="v-to">Куда</span>
-          </button>
-        </div>
-        <div class="sc-row">
-          <button class="sc-cell" id="cell-dep" onclick="openDate('dep')">
-            <span class="sc-val ph" id="v-dep">Туда</span>
-          </button>
-          <button class="sc-cell" onclick="openDate('ret')">
-            <span class="sc-val ph" id="v-ret">Обратно</span>
-          </button>
-        </div>
-        <div class="sc-pax-row">
-          <div class="pax-circle">
-            <svg viewBox="0 0 24 24">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
+          <div class="like-col" data-count="143" onclick="toggleLike(this)">
+            <svg class="heart-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#a8a8a8" stroke-width="1.8"><path d="M12 21s-8.2-4.6-10.1-9.6C0.4 7.3 2.6 3.2 6.7 3.2c2 0 3.7 1 4.7 2.6 1-1.6 2.7-2.6 4.7-2.6 4.1 0 6.3 4.1 4.8 8.2C20.2 16.4 12 21 12 21z"/></svg>
+            <span class="like-count">143</span>
           </div>
-          <span class="pax-txt">1 пассажир</span>
-        </div>
-        <button class="sc-find off" id="find-btn" onclick="doSearch()">НАЙТИ</button>
-      </div>
-
-      <div class="hm-news">
-        С 20 января 2026 г. внесены <a href="#">изменения ↗</a> в ФЗ «О порядке выезда из Российской Федерации и въезда
-        в Российскую Федерацию».
-      </div>
-
-      <div class="hm-body">
-        <div class="hm-card">
-          <div class="hm-card-hdr">Мои поездки <span class="hm-card-arrow">→</span></div>
-          <div class="hm-item">Личный кабинет пассажира</div>
-          <div class="hm-item">Программа «Колея Бонус»</div>
-          <div class="hm-item">Купить премиальный билет</div>
-        </div>
-        <div class="hm-card">
-          <div class="hm-card-hdr">Служба поддержки <span class="hm-card-arrow">→</span></div>
-          <div class="hm-item"><b>8 800 555-12-34</b><small>Бесплатно по России, круглосуточно</small></div>
-          <div class="hm-item"><b>info@kolea.ru</b><small>Для вопросов по электронным билетам</small></div>
         </div>
       </div>
     </div>
 
-    <div id="s-results" class="scr">
-      <header class="rp-hdr">
-        <button class="rp-login">
-          <svg viewBox="0 0 24 24">
-            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-            <polyline points="10 17 15 12 10 7" />
-            <line x1="15" y1="12" x2="3" y2="12" />
-          </svg>
-          Войти
-        </button>
-        <span class="rp-center"></span>
-        <button class="rp-home-btn" onclick="goHome()" title="На главную">
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="22" height="22">
-            <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z"/>
-            <path d="M9 21V12h6v9"/>
-          </svg>
-        </button>
-        <button class="rp-burger"><span></span><span></span><span></span></button>
-      </header>
-
-      <div class="rt-bar">
-        <div>
-          <div class="rt-title">Гагра — Москва</div>
-          <div class="rt-date">04 июня, чт</div>
-        </div>
-        <div class="rt-right">
-          <button class="rt-pax">
-            <svg viewBox="0 0 24 24">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-            1
-          </button>
-          <button class="rt-search">
-            <svg viewBox="0 0 24 24">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-          </button>
+    <!-- Comment 2 -->
+    <div class="comment">
+      <div class="avatar">
+        <svg viewBox="0 0 24 24" fill="#9a9a9a"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+      </div>
+      <div class="col">
+        <div class="row-top">
+          <div class="col-text">
+            <div class="meta">
+              <span class="username">nikitos.live</span>
+              <span class="time">2 нед.</span>
+            </div>
+            <div class="text">И даже тут у нас всё через жопу</div>
+            <div class="actions">
+              <span class="reply-btn">Ответить</span>
+            </div>
+            <div class="view-replies">
+              <div class="line"></div>
+              <span>Посмотреть ещё 6 ответов</span>
+            </div>
+          </div>
+          <div class="like-col" data-count="218" onclick="toggleLike(this)">
+            <svg class="heart-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#a8a8a8" stroke-width="1.8"><path d="M12 21s-8.2-4.6-10.1-9.6C0.4 7.3 2.6 3.2 6.7 3.2c2 0 3.7 1 4.7 2.6 1-1.6 2.7-2.6 4.7-2.6 4.1 0 6.3 4.1 4.8 8.2C20.2 16.4 12 21 12 21z"/></svg>
+            <span class="like-count">218</span>
+          </div>
         </div>
       </div>
+    </div>
 
-      <div class="htl-row">
-        <input type="checkbox" id="htl-chk" />
-        <label for="htl-chk">Найти отель на <a href="#">Travel.Kolea</a></label>
-      </div>
-
-      <div class="rp-tabs">
-        <div class="rp-tabs-left">
-          <svg viewBox="0 0 24 24">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-            <circle cx="7" cy="6" r="2" fill="var(--gray3)" stroke="none" />
-            <circle cx="17" cy="12" r="2" fill="var(--gray3)" stroke="none" />
-            <circle cx="11" cy="18" r="2" fill="var(--gray3)" stroke="none" />
-          </svg>
-        </div>
-        <div class="rp-tabs-right">
-          <button class="rp-tab active">Отправление</button>
-          <button class="rp-tab">Подешевле</button>
-          <button class="rp-tab">Побыстрее</button>
+    <!-- Comment 3 -->
+    <div class="comment">
+      <div class="avatar ring">
+        <div class="inner">
+          <svg viewBox="0 0 24 24" fill="#9a9a9a"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
         </div>
       </div>
-
-      <div class="cards-wrap">
-
-        <!-- ── CARD 480С ── -->
-        <div class="tc" id="tc-480">
-          <span class="tc-fpk">ФПК</span>
-          <div class="tc-numrow">
-            <svg viewBox="0 0 36 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="1" y="5" width="24" height="14" rx="2"/><path d="M25 8.5h7l2 4V19h-9"/>
-              <rect x="3.5" y="7.5" width="4" height="4" rx=".8" fill="currentColor" stroke="none"/>
-              <rect x="10" y="7.5" width="4" height="4" rx=".8" fill="currentColor" stroke="none"/>
-              <rect x="16.5" y="7.5" width="5" height="4" rx=".8" fill="currentColor" stroke="none"/>
-              <circle cx="7" cy="22" r="2" fill="currentColor" stroke="none"/>
-              <circle cx="19" cy="22" r="2" fill="currentColor" stroke="none"/>
-              <line x1="1" y1="14" x2="34" y2="14"/>
-            </svg>
-            <span class="tc-num">480С</span>
-          </div>
-          <div class="tc-daterow">
-            <span>05 июня, чт</span>
-            <span class="tc-dur">19 ч 48 мин</span>
-            <span>06 июня, пт</span>
-          </div>
-          <div class="tc-timeroute">
-            <div class="t-time">22:20</div>
-            <div class="t-route">
-              <div class="t-routeline">
-                <div class="t-rdot"></div>
-                <div class="t-rdash"></div>
-                <button class="t-mbtn">Маршрут</button>
-                <div class="t-rdash"></div>
-                <div class="t-rhead"></div>
-              </div>
+      <div class="col">
+        <div class="row-top">
+          <div class="col-text">
+            <div class="meta">
+              <span class="username">realnyi_grazhdanin</span>
+              <svg width="13" height="13" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#3897f0"/><path d="M7.5 12.5l3 3 6-7" stroke="#fff" stroke-width="2.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="time">1 нед.</span>
             </div>
-            <div class="t-time r">18:08</div>
-          </div>
-          <div class="tc-stns">
-            <div class="st-l"><div class="stn">Гагра</div><div class="stop">Стоянка: 5 мин</div></div>
-            <div class="st-r"><div class="sup">Казанский вокзал</div><div class="stn">Москва Казанская</div></div>
-          </div>
-          <div class="tc-div"></div>
-          <div id="rows-avail">
-            <div class="sr"><span class="sr-type">Плацкартный</span><span class="lo-badge">Мало мест</span><span class="sr-cnt lo">8</span><span class="sr-prc">от 4 820 ₽</span><span class="sr-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-            <div class="sr"><span class="sr-type">Купе</span><span class="lo-badge">Мало мест</span><span class="sr-cnt lo">3</span><span class="sr-prc">от 8 650 ₽</span><span class="sr-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          </div>
-          <div id="rows-sold" style="display:none">
-            <div class="sr sold"><span class="sr-type">Плацкартный</span><span class="sr-cnt">—</span><span class="no-badge">Нет мест</span><span class="sr-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-            <div class="sr sold"><span class="sr-type">Купе</span><span class="sr-cnt">—</span><span class="no-badge">Нет мест</span><span class="sr-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          </div>
-          <div class="tc-footer">
-            <button class="btn-wl" id="wl-480"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Лист ожидания</button>
-            <button class="btn-buy" id="buy-480" onclick="buy480()"><svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg><span id="buy-480-label">Купить</span></button>
-          </div>
-        </div>
-
-        <div class="tc">
-          <span class="tc-fpk">ФПК</span>
-          <div class="tc-numrow">
-            <svg viewBox="0 0 36 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="1" y="5" width="24" height="14" rx="2"/><path d="M25 8.5h7l2 4V19h-9"/>
-              <rect x="3.5" y="7.5" width="4" height="4" rx=".8" fill="currentColor" stroke="none"/>
-              <rect x="10" y="7.5" width="4" height="4" rx=".8" fill="currentColor" stroke="none"/>
-              <rect x="16.5" y="7.5" width="5" height="4" rx=".8" fill="currentColor" stroke="none"/>
-              <circle cx="7" cy="22" r="2" fill="currentColor" stroke="none"/>
-              <circle cx="19" cy="22" r="2" fill="currentColor" stroke="none"/>
-              <line x1="1" y1="14" x2="34" y2="14"/>
-            </svg>
-            <span class="tc-num">304</span>
-          </div>
-          <div class="tc-daterow">
-            <span>06 июня, сб</span>
-            <span class="tc-dur">1 д 3 ч 35 мин</span>
-            <span>07 июня, вс</span>
-          </div>
-          <div class="tc-timeroute">
-            <div class="t-time">19:00</div>
-            <div class="t-route">
-              <div class="t-routeline">
-                <div class="t-rdot"></div>
-                <div class="t-rdash"></div>
-                <button class="t-mbtn">Маршрут</button>
-                <div class="t-rdash"></div>
-                <div class="t-rhead"></div>
-              </div>
+            <div class="text">Так вот куда уходят наши налоги</div>
+            <div class="actions">
+              <span class="reply-btn">Ответить</span>
             </div>
-            <div class="t-time r">22:35</div>
-          </div>
-          <div class="tc-stns">
-            <div class="st-l"><div class="stn">Гагра</div><div class="stop">Стоянка: 15 мин</div></div>
-            <div class="st-r"><div class="sup">Казанский вокзал</div><div class="stn">Москва Казанская</div></div>
-          </div>
-          <div class="tc-div"></div>
-          <div class="sr"><span class="sr-type">Плацкартный</span><span class="sr-cnt">142</span><span class="sr-prc">от 5 955 ₽</span><span class="sr-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="sr"><span class="sr-type">Купе</span><span class="sr-cnt">145</span><span class="sr-prc">от 9 950 ₽</span><span class="sr-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="sr"><span class="sr-type">СВ</span><span class="sr-cnt">7</span><span class="sr-prc">от 20 994 ₽</span><span class="sr-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="sr"><span class="sr-type">Купе (для инвалидов)</span><span class="sr-cnt">2</span><span class="sr-prc">от 9 950 ₽</span><span class="sr-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="tc-footer">
-            <button class="btn-wl"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Лист ожидания</button>
-            <button class="btn-buy"><svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Купить</button>
-          </div>
-        </div>
-
-        <div class="tc">
-          <span class="tc-fpk">ФПК</span>
-          <div class="tc-numrow">
-            <svg viewBox="0 0 36 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="1" y="5" width="24" height="14" rx="2"/><path d="M25 8.5h7l2 4V19h-9"/>
-              <rect x="3.5" y="7.5" width="4" height="4" rx=".8" fill="currentColor" stroke="none"/>
-              <rect x="10" y="7.5" width="4" height="4" rx=".8" fill="currentColor" stroke="none"/>
-              <rect x="16.5" y="7.5" width="5" height="4" rx=".8" fill="currentColor" stroke="none"/>
-              <circle cx="7" cy="22" r="2" fill="currentColor" stroke="none"/>
-              <circle cx="19" cy="22" r="2" fill="currentColor" stroke="none"/>
-              <line x1="1" y1="14" x2="34" y2="14"/>
-            </svg>
-            <span class="tc-num">408</span>
-          </div>
-          <div class="tc-daterow">
-            <span>07 июня, вс</span>
-            <span class="tc-dur">1 д 3 ч 26 мин</span>
-            <span>08 июня, пн</span>
-          </div>
-          <div class="tc-timeroute">
-            <div class="t-time">15:00</div>
-            <div class="t-route">
-              <div class="t-routeline">
-                <div class="t-rdot"></div>
-                <div class="t-rdash"></div>
-                <button class="t-mbtn">Маршрут</button>
-                <div class="t-rdash"></div>
-                <div class="t-rhead"></div>
-              </div>
+            <div class="view-replies">
+              <div class="line"></div>
+              <span>Посмотреть ещё 11 ответов</span>
             </div>
-            <div class="t-time r">18:26</div>
           </div>
-          <div class="tc-stns">
-            <div class="st-l"><div class="stn">Гагра</div><div class="stop">Стоянка: 5 мин</div></div>
-            <div class="st-r"><div class="sup">Казанский вокзал</div><div class="stn">Москва Казанская</div></div>
+          <div class="like-col" data-count="392" onclick="toggleLike(this)">
+            <svg class="heart-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#a8a8a8" stroke-width="1.8"><path d="M12 21s-8.2-4.6-10.1-9.6C0.4 7.3 2.6 3.2 6.7 3.2c2 0 3.7 1 4.7 2.6 1-1.6 2.7-2.6 4.7-2.6 4.1 0 6.3 4.1 4.8 8.2C20.2 16.4 12 21 12 21z"/></svg>
+            <span class="like-count">392</span>
           </div>
-          <div class="tc-div"></div>
-          <div class="sr"><span class="sr-type">Плацкартный</span><span class="sr-cnt">142</span><span class="sr-prc">от 5 394 ₽</span><span class="sr-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="sr"><span class="sr-type">Купе</span><span class="sr-cnt">145</span><span class="sr-prc">от 9 042 ₽</span><span class="sr-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="sr"><span class="sr-type">СВ</span><span class="sr-cnt">7</span><span class="sr-prc">от 20 994 ₽</span><span class="sr-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="sr"><span class="sr-type">Купе (для инвалидов)</span><span class="sr-cnt">2</span><span class="sr-prc">от 9 042 ₽</span><span class="sr-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="tc-footer">
-            <button class="btn-wl"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Лист ожидания</button>
-            <button class="btn-buy"><svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Купить</button>
-          </div>
-        </div>
-
-        <div class="tc">
-          <span class="tc-fpk">ФПК</span>
-          <div class="tc-numrow">
-            <svg viewBox="0 0 36 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="1" y="5" width="24" height="14" rx="2"/><path d="M25 8.5h7l2 4V19h-9"/>
-              <rect x="3.5" y="7.5" width="4" height="4" rx=".8" fill="currentColor" stroke="none"/>
-              <rect x="10" y="7.5" width="4" height="4" rx=".8" fill="currentColor" stroke="none"/>
-              <rect x="16.5" y="7.5" width="5" height="4" rx=".8" fill="currentColor" stroke="none"/>
-              <circle cx="7" cy="22" r="2" fill="currentColor" stroke="none"/>
-              <circle cx="19" cy="22" r="2" fill="currentColor" stroke="none"/>
-              <line x1="1" y1="14" x2="34" y2="14"/>
-            </svg>
-            <span class="tc-num">304</span>
-          </div>
-          <div class="tc-daterow">
-            <span>07 июня, вс</span>
-            <span class="tc-dur">1 д 23 ч 15 мин</span>
-            <span>09 июня, вт</span>
-          </div>
-          <div class="tc-timeroute">
-            <div class="t-time">20:15</div>
-            <div class="t-route">
-              <div class="t-routeline">
-                <div class="t-rdot"></div>
-                <div class="t-rdash"></div>
-                <button class="t-mbtn">Маршрут</button>
-                <div class="t-rdash"></div>
-                <div class="t-rhead"></div>
-              </div>
-            </div>
-            <div class="t-time r">19:30</div>
-          </div>
-          <div class="tc-stns">
-            <div class="st-l"><div class="stn">Гагра</div><div class="stop">Стоянка: 15 мин</div></div>
-            <div class="st-r"><div class="sup">Казанский вокзал</div><div class="stn">Москва Казанская</div></div>
-          </div>
-          <div class="tc-div"></div>
-          <div class="sr"><span class="sr-type">Плацкартный</span><span class="sr-cnt">142</span><span class="sr-prc">от 4 394 ₽</span><span class="sr-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="sr"><span class="sr-type">Купе</span><span class="sr-cnt">145</span><span class="sr-prc">от 8 047 ₽</span><span class="sr-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="sr"><span class="sr-type">СВ</span><span class="sr-cnt">7</span><span class="sr-prc">от 18 934 ₽</span><span class="sr-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="sr"><span class="sr-type">Купе (для инвалидов)</span><span class="sr-cnt">2</span><span class="sr-prc">от 8 047 ₽</span><span class="sr-chev"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span></div>
-          <div class="tc-footer">
-            <button class="btn-wl"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Лист ожидания</button>
-            <button class="btn-buy"><svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>Купить</button>
-          </div>
-        </div>
-
-        <div class="fav" id="fav-block">
-          <div class="fav-hdr">
-            Избранные маршруты
-            <button class="fav-x" onclick="this.closest('.fav').style.display='none'">✕</button>
-          </div>
-          <ul class="fav-ul">
-            <li>быстрый выбор маршрута на главной странице</li>
-            <li>фильтр избранного маршрута автоматически сохраняется</li>
-          </ul>
-          <div class="fav-note">Войдите для сохранения маршрута</div>
-          <button class="fav-login-btn">Войти →</button>
         </div>
       </div>
+    </div>
 
-      <button class="filter-float">
-        <svg viewBox="0 0 24 24">
-          <line x1="4" y1="6" x2="20" y2="6" />
-          <line x1="4" y1="12" x2="20" y2="12" />
-          <line x1="4" y1="18" x2="20" y2="18" />
-          <circle cx="8" cy="6" r="2.2" fill="white" stroke="none" />
-          <circle cx="16" cy="12" r="2.2" fill="white" stroke="none" />
-          <circle cx="10" cy="18" r="2.2" fill="white" stroke="none" />
+    <!-- Comment 4 -->
+    <div class="comment">
+      <div class="avatar">
+        <svg viewBox="0 0 24 24" fill="#9a9a9a"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+      </div>
+      <div class="col">
+        <div class="row-top">
+          <div class="col-text">
+            <div class="meta">
+              <span class="username">zhenya.tech</span>
+              <span class="time">1 нед.</span>
+            </div>
+            <div class="text">Даже ИИ переводит спокойнее</div>
+            <div class="actions">
+              <span class="reply-btn">Ответить</span>
+            </div>
+          </div>
+          <div class="like-col" data-count="97" onclick="toggleLike(this)">
+            <svg class="heart-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#a8a8a8" stroke-width="1.8"><path d="M12 21s-8.2-4.6-10.1-9.6C0.4 7.3 2.6 3.2 6.7 3.2c2 0 3.7 1 4.7 2.6 1-1.6 2.7-2.6 4.7-2.6 4.1 0 6.3 4.1 4.8 8.2C20.2 16.4 12 21 12 21z"/></svg>
+            <span class="like-count">97</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comment 5 -->
+    <div class="comment">
+      <div class="avatar">
+        <svg viewBox="0 0 24 24" fill="#9a9a9a"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+      </div>
+      <div class="col">
+        <div class="row-top">
+          <div class="col-text">
+            <div class="meta">
+              <span class="username">uchilka_lara</span>
+              <span class="time">1 нед.</span>
+            </div>
+            <div class="text">Садись, два.</div>
+            <div class="actions">
+              <span class="reply-btn">Ответить</span>
+            </div>
+          </div>
+          <div class="like-col" data-count="64" onclick="toggleLike(this)">
+            <svg class="heart-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#a8a8a8" stroke-width="1.8"><path d="M12 21s-8.2-4.6-10.1-9.6C0.4 7.3 2.6 3.2 6.7 3.2c2 0 3.7 1 4.7 2.6 1-1.6 2.7-2.6 4.7-2.6 4.1 0 6.3 4.1 4.8 8.2C20.2 16.4 12 21 12 21z"/></svg>
+            <span class="like-count">64</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comment 6 -->
+    <div class="comment">
+      <div class="avatar">
+        <svg viewBox="0 0 24 24" fill="#9a9a9a"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+      </div>
+      <div class="col">
+        <div class="row-top">
+          <div class="col-text">
+            <div class="meta">
+              <span class="username">sosed_s_5go</span>
+              <span class="time">6 дн.</span>
+            </div>
+            <div class="text">Мне физически больно это слушать</div>
+            <div class="actions">
+              <span class="reply-btn">Ответить</span>
+            </div>
+            <div class="view-replies">
+              <div class="line"></div>
+              <span>Посмотреть ещё 3 ответа</span>
+            </div>
+          </div>
+          <div class="like-col" data-count="156" onclick="toggleLike(this)">
+            <svg class="heart-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#a8a8a8" stroke-width="1.8"><path d="M12 21s-8.2-4.6-10.1-9.6C0.4 7.3 2.6 3.2 6.7 3.2c2 0 3.7 1 4.7 2.6 1-1.6 2.7-2.6 4.7-2.6 4.1 0 6.3 4.1 4.8 8.2C20.2 16.4 12 21 12 21z"/></svg>
+            <span class="like-count">156</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comment 7 -->
+    <div class="comment">
+      <div class="avatar ring">
+        <div class="inner">
+          <svg viewBox="0 0 24 24" fill="#9a9a9a"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+        </div>
+      </div>
+      <div class="col">
+        <div class="row-top">
+          <div class="col-text">
+            <div class="meta">
+              <span class="username">local_glossary</span>
+              <svg width="13" height="13" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#3897f0"/><path d="M7.5 12.5l3 3 6-7" stroke="#fff" stroke-width="2.3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span class="time">5 дн.</span>
+            </div>
+            <div class="text">Фром зе боттом оф май харт <span class="emoji">😭</span></div>
+            <div class="actions">
+              <span class="reply-btn">Ответить</span>
+            </div>
+            <div class="view-replies">
+              <div class="line"></div>
+              <span>Посмотреть ещё 14 ответов</span>
+            </div>
+          </div>
+          <div class="like-col" data-count="271" onclick="toggleLike(this)">
+            <svg class="heart-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#a8a8a8" stroke-width="1.8"><path d="M12 21s-8.2-4.6-10.1-9.6C0.4 7.3 2.6 3.2 6.7 3.2c2 0 3.7 1 4.7 2.6 1-1.6 2.7-2.6 4.7-2.6 4.1 0 6.3 4.1 4.8 8.2C20.2 16.4 12 21 12 21z"/></svg>
+            <span class="like-count">271</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comment 8 -->
+    <div class="comment">
+      <div class="avatar">
+        <svg viewBox="0 0 24 24" fill="#9a9a9a"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+      </div>
+      <div class="col">
+        <div class="row-top">
+          <div class="col-text">
+            <div class="meta">
+              <span class="username">futurolog_by</span>
+              <span class="time">4 дн.</span>
+            </div>
+            <div class="text">Топ 10 причин почему ИИ всех заменит</div>
+            <div class="actions">
+              <span class="reply-btn">Ответить</span>
+            </div>
+          </div>
+          <div class="like-col" data-count="81" onclick="toggleLike(this)">
+            <svg class="heart-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#a8a8a8" stroke-width="1.8"><path d="M12 21s-8.2-4.6-10.1-9.6C0.4 7.3 2.6 3.2 6.7 3.2c2 0 3.7 1 4.7 2.6 1-1.6 2.7-2.6 4.7-2.6 4.1 0 6.3 4.1 4.8 8.2C20.2 16.4 12 21 12 21z"/></svg>
+            <span class="like-count">81</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comment 9 -->
+    <div class="comment">
+      <div class="avatar">
+        <svg viewBox="0 0 24 24" fill="#9a9a9a"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+      </div>
+      <div class="col">
+        <div class="row-top">
+          <div class="col-text">
+            <div class="meta">
+              <span class="username">vityok_emocii</span>
+              <span class="time">3 дн.</span>
+            </div>
+            <div class="gif-attachment">
+              <span class="gif-tag">GIF</span>
+              <svg class="rage-face" viewBox="0 0 100 100">
+                <circle cx="50" cy="52" r="44" fill="#ffb238"/>
+                <path d="M20 36 L40 28" stroke="#3a1c00" stroke-width="6" stroke-linecap="round"/>
+                <path d="M80 36 L60 28" stroke="#3a1c00" stroke-width="6" stroke-linecap="round"/>
+                <circle cx="33" cy="46" r="4.5" fill="#3a1c00"/>
+                <circle cx="67" cy="46" r="4.5" fill="#3a1c00"/>
+                <path d="M14 50 L4 46 M14 56 L3 58 M86 50 L96 46 M86 56 L97 58" stroke="#ff8a3d" stroke-width="3" stroke-linecap="round"/>
+                <ellipse cx="50" cy="76" rx="20" ry="16" fill="#7a1010"/>
+                <ellipse cx="50" cy="80" rx="12" ry="8" fill="#ff5d5d"/>
+              </svg>
+            </div>
+            <div class="actions">
+              <span class="reply-btn">Ответить</span>
+            </div>
+          </div>
+          <div class="like-col" data-count="437" onclick="toggleLike(this)">
+            <svg class="heart-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#a8a8a8" stroke-width="1.8"><path d="M12 21s-8.2-4.6-10.1-9.6C0.4 7.3 2.6 3.2 6.7 3.2c2 0 3.7 1 4.7 2.6 1-1.6 2.7-2.6 4.7-2.6 4.1 0 6.3 4.1 4.8 8.2C20.2 16.4 12 21 12 21z"/></svg>
+            <span class="like-count">437</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="emoji-bar">
+    <span onclick="addEmoji('❤️')">❤️</span><span onclick="addEmoji('🙌')">🙌</span><span onclick="addEmoji('🔥')">🔥</span><span onclick="addEmoji('👏')">👏</span><span onclick="addEmoji('😢')">😢</span><span onclick="addEmoji('😍')">😍</span><span onclick="addEmoji('😮')">😮</span><span onclick="addEmoji('😂')">😂</span>
+  </div>
+
+  <div class="input-row">
+    <div class="input-avatar">
+      <svg viewBox="0 0 24 24" fill="#9a9a9a"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+    </div>
+    <input id="commentInput" class="input-pill" type="text" placeholder="Оставьте комментарий д..." oninput="onCommentInput()" onkeydown="if(event.key==='Enter'){postComment();}">
+    <div class="media-icons" id="mediaIcons">
+      <div class="icon-btn">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#a8a8a8" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+          <rect x="3" y="3" width="18" height="18" rx="3"/>
+          <circle cx="8.5" cy="8.5" r="1.4"/>
+          <path d="M21 15.5l-5.2-5.2-3.8 3.8-2.6-2.6L3 18"/>
         </svg>
-        ФИЛЬТР
-      </button>
-    </div>
-
-    <div class="modal" id="m-city">
-      <div class="m-sticky">
-        <div class="m-hdr">
-          <div class="m-hint" id="city-hint">Начните вводить и выберите пункт отправления из списка</div>
-          <button class="m-x" onclick="closeCity()">✕</button>
-        </div>
-        <div class="ci-wrap">
-          <input
-            class="ci"
-            id="ci-input"
-            type="text"
-            autocomplete="off"
-            spellcheck="false"
-            placeholder="Откуда"
-            oninput="onCityType(this.value)"
-          />
-          <button class="ci-x" id="ci-clear" onclick="clearCityInput()">✕</button>
-        </div>
       </div>
-      <div id="city-results"></div>
-    </div>
-
-    <div class="modal" id="m-date">
-      <div class="dm-sticky">
-        <div class="dm-hdr">
-          <div class="dm-title" id="dm-title">Дата отправления</div>
-          <button class="m-x" onclick="closeDate()">✕</button>
-        </div>
-        <div class="dm-fields">
-          <div class="df af" id="df-dep" onclick="setMode('dep')">
-            <span class="df-v" id="dfv-dep">Туда</span>
-            <button class="df-x" id="dfx-dep" onclick="event.stopPropagation();clearDep()">✕</button>
-          </div>
-          <div class="df" id="df-ret" onclick="setMode('ret')">
-            <span class="df-v" id="dfv-ret">Обратно</span>
-            <button class="df-x" id="dfx-ret" onclick="event.stopPropagation();clearRet()">✕</button>
-          </div>
-        </div>
-      </div>
-      <div class="cal-body" id="cal-body"></div>
-      <button class="cbtn" id="cal-cont" onclick="confirmDates()">ПРОДОЛЖИТЬ</button>
-    </div>
-
-    <div class="so-bg" id="so-bg" onclick="if(event.target===this)closeSO()">
-      <div class="so-sheet">
-        <div class="so-handle"></div>
-        <!-- checking -->
-        <div class="so-phase-check" id="so-checking">
-          <div class="so-spin"></div>
-          <div class="so-chk-txt">Уточняем наличие мест...</div>
-        </div>
-        <!-- result -->
-        <div class="so-phase-res" id="so-res">
-          <div class="so-icon-wrap">
-            <svg viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="8" y1="8" x2="16" y2="16" />
-              <line x1="16" y1="8" x2="8" y2="16" />
-            </svg>
-          </div>
-          <div class="so-title">Билеты отсутствуют</div>
-          <div class="so-sub">На этот поезд все места распроданы<br />или не поступали в продажу</div>
-          <div class="so-infobox">
-            <div class="so-row"><span class="so-lbl">Поезд</span><span class="so-val">480С · Гагра — Москва</span></div>
-            <div class="so-row"><span class="so-lbl">Отправление</span><span class="so-val">5 июня · 22:20</span></div>
-            <div class="so-row"><span class="so-lbl">Прибытие</span><span class="so-val">6 июня · 18:08</span></div>
-          </div>
-          <button class="so-btn-wl" onclick="alert('Вы добавлены в лист ожидания 480С')">
-            <svg viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-            Встать в лист ожидания
-          </button>
-          <button class="so-btn-back" onclick="closeSO()">Назад к результатам</button>
-        </div>
+      <div class="icon-btn">
+        <div class="gif-badge">GIF</div>
       </div>
     </div>
+    <button id="postBtn" class="post-btn" onclick="postComment()">Опубликовать</button>
+  </div>
 
-    <div class="g-loader" id="g-loader">
-      <div class="pl-spin"></div>
-    </div>
+</div>
 
-    <div class="g-loader" id="home-loader">
-      <div class="pl-spin"></div>
-    </div>
+<script>
+  // --- Лайки ---
+  function toggleLike(col){
+    const liked = col.classList.toggle('liked');
+    const base = parseInt(col.dataset.count, 10) || 0;
+    const countEl = col.querySelector('.like-count');
+    const heart = col.querySelector('.heart-icon');
 
-    <script>
-      var fromCity = "",
-        toCity = "";
-      var cityTarget = "from",
-        dateMode = "dep";
-      var selDep = null,
-        selRet = null;
-      var isSold = sessionStorage.getItem("kolea_sold") === "1";
-      var MO = [
-        "января",
-        "февраля",
-        "марта",
-        "апреля",
-        "мая",
-        "июня",
-        "июля",
-        "августа",
-        "сентября",
-        "октября",
-        "ноября",
-        "декабря",
-      ];
-      var DOW = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"];
-      var TODAY = new Date(2026, 4, 26);
-      var PRICES = {
-      };
+    countEl.textContent = liked ? base + 1 : base;
 
-      (function () {
-        if (sessionStorage.getItem("kolea_on") === "1") {
-          showScreen("results");
-          if (isSold) applySold();
-        }
-      })();
+    if(liked){
+      heart.setAttribute('fill', '#ed4956');
+      heart.setAttribute('stroke', '#ed4956');
+      heart.classList.remove('pop');
+      void heart.offsetWidth; // форсируем перезапуск анимации
+      heart.classList.add('pop');
+    } else {
+      heart.setAttribute('fill', 'none');
+      heart.setAttribute('stroke', '#a8a8a8');
+    }
+  }
 
-      function showScreen(id) {
-        document.querySelectorAll(".scr").forEach(function (s) {
-          s.classList.remove("on");
-        });
-        document.getElementById("s-" + id).classList.add("on");
-        window.scrollTo(0, 0);
-      }
+  // --- Поле ввода комментария ---
+  const commentInput = document.getElementById('commentInput');
+  const postBtn = document.getElementById('postBtn');
+  const mediaIcons = document.getElementById('mediaIcons');
+  const commentsList = document.getElementById('commentsList');
 
-      function goHome() {
-        sessionStorage.removeItem("kolea_on");
-        showLoader("home-loader", function () {
-          showScreen("home");
-        }, 1200);
-      }
+  function onCommentInput(){
+    const hasText = commentInput.value.trim().length > 0;
+    postBtn.style.display = hasText ? 'block' : 'none';
+    mediaIcons.style.display = hasText ? 'none' : 'flex';
+  }
 
-      function swTab(el) {
-        document.querySelectorAll(".sc-tab").forEach(function (t) {
-          t.classList.remove("on");
-        });
-        el.classList.add("on");
-      }
-      function checkFindBtn() {
-        var b = document.getElementById("find-btn");
-        b.className = "sc-find " + (fromCity && toCity ? "on" : "off");
-      }
+  function addEmoji(emoji){
+    commentInput.value += emoji;
+    commentInput.focus();
+    onCommentInput();
+  }
 
-      var DEF = ["Москва", "Санкт-Петербург", "Казань", "Нижний Новгород", "Адлер", "Самара"];
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
 
-      function trainIcon(c) {
-        c = c || "#9EB0BA";
-        return (
-          '<svg style="width:22px;height:22px;flex-shrink:0;" viewBox="0 0 36 24" fill="none" stroke="' +
-          c +
-          '" stroke-width="1.5" stroke-linecap="round"><rect x="1" y="5" width="24" height="14" rx="2"/><path d="M25 8h7l2 4V19h-9"/><rect x="3.5" y="7.5" width="4" height="4" rx=".8" fill="' +
-          c +
-          '" stroke="none"/><rect x="10" y="7.5" width="4" height="4" rx=".8" fill="' +
-          c +
-          '" stroke="none"/><circle cx="7" cy="22" r="2" fill="' +
-          c +
-          '" stroke="none"/><circle cx="19" cy="22" r="2" fill="' +
-          c +
-          '" stroke="none"/><line x1="1" y1="14" x2="34" y2="14"/></svg>'
-        );
-      }
-      function busIcon() {
-        return '<svg style="width:22px;height:22px;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="#9EB0BA" stroke-width="1.4" stroke-linecap="round"><rect x="1" y="4" width="14" height="13" rx="1"/><polygon points="15 9 20 9 22 12 22 17 15 17"/><circle cx="5.5" cy="19.5" r="2"/><circle cx="18" cy="19.5" r="2"/></svg>';
-      }
-      function pinIcon() {
-        return '<svg style="width:13px;height:13px;flex-shrink:0;" viewBox="0 0 24 24" fill="none" stroke="#9EB0BA" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="10" r="3"/><path d="M12 2C8.1 2 5 5.1 5 9c0 5.3 7 13 7 13s7-7.7 7-13c0-3.9-3.1-7-7-7z"/></svg>';
-      }
+  function postComment(){
+    const text = commentInput.value.trim();
+    if(!text) return;
 
-      function secLabel(ico, txt) {
-        return '<div class="ci-sec">' + ico + txt + "</div>";
-      }
-      function cityItem(name, sub, q, ico, fn) {
-        var disp = q
-          ? name.replace(
-              new RegExp("(" + q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "gi"),
-              '<span class="hl">$1</span>'
-            )
-          : name;
-        return (
-          '<div class="ci-item" onclick="' +
-          fn +
-          '"><div class="ci-ico">' +
-          ico +
-          '</div><div><div class="ci-name">' +
-          disp +
-          "</div>" +
-          (sub ? '<div class="ci-sub">' + sub + "</div>" : "") +
-          "</div></div>"
-        );
-      }
+    const div = document.createElement('div');
+    div.className = 'comment';
+    div.innerHTML = `
+      <div class="avatar">
+        <svg viewBox="0 0 24 24" fill="#9a9a9a"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+      </div>
+      <div class="col">
+        <div class="row-top">
+          <div class="col-text">
+            <div class="meta">
+              <span class="username">вы</span>
+              <span class="time">сейчас</span>
+            </div>
+            <div class="text">${escapeHtml(text)}</div>
+            <div class="actions">
+              <span class="reply-btn">Ответить</span>
+            </div>
+          </div>
+          <div class="like-col" data-count="0" onclick="toggleLike(this)">
+            <svg class="heart-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#a8a8a8" stroke-width="1.8"><path d="M12 21s-8.2-4.6-10.1-9.6C0.4 7.3 2.6 3.2 6.7 3.2c2 0 3.7 1 4.7 2.6 1-1.6 2.7-2.6 4.7-2.6 4.1 0 6.3 4.1 4.8 8.2C20.2 16.4 12 21 12 21z"/></svg>
+            <span class="like-count">0</span>
+          </div>
+        </div>
+      </div>
+    `;
 
-      function renderDefaults() {
-        var h = secLabel(pinIcon(), "Город, населённый пункт");
-        DEF.forEach(function (c) {
-          h += cityItem(c, "", "", trainIcon(), "selCity('" + c + "')");
-        });
-        document.getElementById("city-results").innerHTML = h;
-      }
-      function onCityType(val) {
-        var clr = document.getElementById("ci-clear");
-        val ? clr.classList.add("show") : clr.classList.remove("show");
-        if (!val) {
-          renderDefaults();
-          return;
-        }
-        var q = val.toLowerCase();
-        var h = "";
-        if ("гагра".indexOf(q) >= 0 || (q.length && "гагра".startsWith(q))) {
-          h += secLabel(pinIcon(), "Город, населённый пункт");
-          h += cityItem("Гагра", "Республика Абхазия", val, trainIcon(), "selCity('Гагра')");
-          h += secLabel(trainIcon(), "Поездом");
-          h += cityItem(
-            "Гагра",
-            "Гагра, Гагрский Район, Республика Абхазия",
-            val,
-            trainIcon("#4B7B9C"),
-            "selCity('Гагра')"
-          );
-          h += secLabel(busIcon(), "Автобусом");
-          h += cityItem("Гагра Авт", "Гагра, Гагрский Район, Краснодарский Край", val, busIcon(), "selCity('Гагра')");
-        } else if ("москва".indexOf(q) >= 0 || (q.length && "москва".startsWith(q))) {
-          h += secLabel(pinIcon(), "Город, населённый пункт");
-          h += cityItem("Москва", "Россия", val, trainIcon(), "selCity('Москва')");
-          h += secLabel(trainIcon(), "Поездом");
-          h += cityItem("Москва", "Москва, Россия", val, trainIcon("#4B7B9C"), "selCity('Москва')");
-          h += cityItem("Москва Казанская", "Москва, Россия", val, trainIcon("#4B7B9C"), "selCity('Москва')");
-          h += cityItem("Москва Ярославская", "Москва, Россия", val, trainIcon("#4B7B9C"), "selCity('Москва')");
-        } else {
-          h =
-            '<div style="padding:36px 14px;text-align:center;font-size:14px;color:var(--gray3);">Город не найден</div>';
-        }
-        document.getElementById("city-results").innerHTML = h;
-      }
-      function clearCityInput() {
-        var inp = document.getElementById("ci-input");
-        inp.value = "";
-        document.getElementById("ci-clear").classList.remove("show");
-        renderDefaults();
-        inp.focus();
-      }
-      function openCity(target) {
-        cityTarget = target;
-        var inp = document.getElementById("ci-input");
-        document.getElementById("city-hint").textContent =
-          target === "from"
-            ? "Начните вводить и выберите пункт отправления из списка"
-            : "Начните вводить и выберите пункт назначения из списка";
-        inp.placeholder = target === "from" ? "Откуда" : "Куда";
-        inp.value = "";
-        document.getElementById("ci-clear").classList.remove("show");
-        renderDefaults();
-        document.getElementById("m-city").classList.add("on");
-        setTimeout(function () {
-          inp.focus();
-        }, 300);
-      }
-      function closeCity() {
-        document.getElementById("m-city").classList.remove("on");
-      }
-      function selCity(name) {
-        if (cityTarget === "from") {
-          fromCity = name;
-          var e = document.getElementById("v-from");
-          e.textContent = name;
-          e.classList.remove("ph");
-        } else {
-          toCity = name;
-          var e2 = document.getElementById("v-to");
-          e2.textContent = name;
-          e2.classList.remove("ph");
-        }
-        closeCity();
-        checkFindBtn();
-      }
+    commentsList.appendChild(div);
+    commentInput.value = '';
+    onCommentInput();
+    commentsList.scrollTop = commentsList.scrollHeight;
+  }
+</script>
 
-      function fmt2(d) {
-        return (
-          String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + "." + d.getFullYear()
-        );
-      }
-      function fmtDisp(d) {
-        return d.getDate() + " " + MO[d.getMonth()] + ", " + DOW[d.getDay()];
-      }
-      function sameDay(a, b) {
-        return (
-          a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
-        );
-      }
-
-      function openDate(mode) {
-        dateMode = mode;
-        syncDmTitle();
-        syncDmFields();
-        buildCal();
-        document.getElementById("m-date").classList.add("on");
-        setTimeout(function () {
-          var hs = document.getElementById("cal-body").querySelectorAll(".mo-hd");
-          if (hs.length > 1) hs[1].scrollIntoView({ behavior: "instant", block: "start" });
-        }, 60);
-      }
-      function closeDate() {
-        document.getElementById("m-date").classList.remove("on");
-      }
-      function setMode(m) {
-        dateMode = m;
-        syncDmTitle();
-        syncDmFields();
-      }
-      function syncDmTitle() {
-        document.getElementById("dm-title").textContent = dateMode === "dep" ? "Дата отправления" : "Дата возвращения";
-      }
-      function syncDmFields() {
-        var dd = document.getElementById("df-dep"),
-          dr = document.getElementById("df-ret");
-        var dt = document.getElementById("dfv-dep"),
-          rt = document.getElementById("dfv-ret");
-        var dx = document.getElementById("dfx-dep"),
-          rx = document.getElementById("dfx-ret");
-        if (selDep) {
-          dt.textContent = fmt2(selDep);
-          dd.classList.add("filled");
-          dx.classList.add("show");
-        } else {
-          dt.textContent = "Туда";
-          dd.classList.remove("filled");
-          dx.classList.remove("show");
-        }
-        if (selRet) {
-          rt.textContent = fmt2(selRet);
-          dr.classList.add("filled");
-          rx.classList.add("show");
-        } else {
-          rt.textContent = "Обратно";
-          dr.classList.remove("filled");
-          rx.classList.remove("show");
-        }
-        dd.classList.toggle("af", dateMode === "dep");
-        dr.classList.toggle("af", dateMode === "ret");
-      }
-      function clearDep() {
-        selDep = null;
-        syncDmFields();
-        buildCal();
-        checkFindBtn();
-      }
-      function clearRet() {
-        selRet = null;
-        syncDmFields();
-        buildCal();
-        checkFindBtn();
-      }
-
-      function buildCal() {
-        var months = [
-          { y: 2026, m: 4, l: "Май 2026" },
-          { y: 2026, m: 5, l: "Июнь 2026" },
-          { y: 2026, m: 6, l: "Июль 2026" },
-        ];
-        var h = "";
-        months.forEach(function (mo) {
-          h += '<div class="mo-hd">' + mo.l + '</div><div class="mo-divider"></div>';
-          h +=
-            '<div class="wk-hdr"><span>ПН</span><span>ВТ</span><span>СР</span><span>ЧТ</span><span>ПТ</span><span class="we">СБ</span><span class="we">ВС</span></div>';
-          h += '<div class="cal-g">';
-          var fd = new Date(mo.y, mo.m, 1).getDay();
-          var off = fd === 0 ? 6 : fd - 1;
-          for (var i = 0; i < off; i++) h += "<div></div>";
-          var dim = new Date(mo.y, mo.m + 1, 0).getDate();
-          for (var d = 1; d <= dim; d++) {
-            var date = new Date(mo.y, mo.m, d);
-            var past = date < TODAY;
-            var we = date.getDay() === 0 || date.getDay() === 6;
-            var price = PRICES[mo.y + "-" + mo.m + "-" + d];
-            var isDep = sameDay(date, selDep),
-              isRet = sameDay(date, selRet);
-            var sel = isDep || isRet;
-            var inRng = selDep && selRet && date > selDep && date < selRet;
-            var nc = "dn" + (past ? " dim" : sel ? " sel" : we ? " we" : "");
-            var ic = sel ? " sel" : inRng ? " rng" : "";
-            var pr =
-              price && !past ? '<span class="dp' + (sel ? " sel" : "") + '">' + price.toLocaleString() + "</span>" : "";
-            h +=
-              '<div class="cd' +
-              (past ? " past" : "") +
-              '" onclick="pickD(' +
-              mo.y +
-              "," +
-              mo.m +
-              "," +
-              d +
-              ')">' +
-              '<div class="cdi' +
-              ic +
-              '"><span class="' +
-              nc +
-              '">' +
-              d +
-              "</span>" +
-              pr +
-              "</div></div>";
-          }
-          h += "</div>";
-        });
-        document.getElementById("cal-body").innerHTML = h;
-      }
-      function pickD(y, m, d) {
-        var date = new Date(y, m, d);
-        if (date < TODAY) return;
-        if (dateMode === "dep") {
-          selDep = date;
-          if (selRet && date >= selRet) selRet = null;
-          dateMode = "ret";
-          syncDmTitle();
-        } else {
-          if (selDep && date < selDep) return;
-          selRet = date;
-        }
-        document.getElementById("cal-cont").style.display = "block";
-        syncDmFields();
-        buildCal();
-      }
-      function confirmDates() {
-        if (selDep) {
-          var e = document.getElementById("v-dep");
-          e.textContent = fmtDisp(selDep);
-          e.classList.remove("ph");
-        }
-        if (selRet) {
-          var e2 = document.getElementById("v-ret");
-          e2.textContent = fmtDisp(selRet);
-          e2.classList.remove("ph");
-        }
-        closeDate();
-        checkFindBtn();
-      }
-
-      function showLoader(id, cb, delay) {
-        var el = document.getElementById(id);
-        // 1. Показываем лоадер мгновенно (без transition) — он перекрывает текущий экран
-        el.style.transition = "none";
-        el.classList.add("on", "visible");
-        // Принудительный reflow — браузер рисует лоадер прямо сейчас
-        void el.offsetHeight;
-        // Возвращаем transition только для последующего fade-out
-        el.style.transition = "";
-
-        // 2. Рендерим новый контент ПОД лоадером — пользователь ничего не видит
-        cb();
-
-        // 3. После задержки плавно убираем лоадер — контент уже готов
-        setTimeout(function () {
-          el.classList.remove("visible");
-          setTimeout(function () {
-            el.classList.remove("on");
-          }, 250);
-        }, delay);
-      }
-
-      function doSearch() {
-        if (!fromCity || !toCity) return;
-        showLoader("g-loader", function () {
-          sessionStorage.setItem("kolea_on", "1");
-          showScreen("results");
-          if (isSold) applySold();
-        }, 1800);
-      }
-
-      function buy480() {
-        document.getElementById("so-checking").style.display = "flex";
-        document.getElementById("so-res").classList.remove("on");
-        document.getElementById("so-bg").classList.add("on");
-        setTimeout(function () {
-          document.getElementById("so-checking").style.display = "none";
-          document.getElementById("so-res").classList.add("on");
-          isSold = true;
-          sessionStorage.setItem("kolea_sold", "1");
-          applySold();
-        }, 1800);
-      }
-      function applySold() {
-        document.getElementById("rows-avail").style.display = "none";
-        document.getElementById("rows-sold").style.display = "block";
-        var btn = document.getElementById("buy-480");
-        btn.classList.add("dis");
-        btn.onclick = function () {
-          openSoldSheet();
-        };
-        document.getElementById("buy-480-label").textContent = "Нет мест";
-      }
-      function openSoldSheet() {
-        document.getElementById("so-checking").style.display = "none";
-        document.getElementById("so-res").classList.add("on");
-        document.getElementById("so-bg").classList.add("on");
-      }
-      function closeSO() {
-        document.getElementById("so-bg").classList.remove("on");
-      }
-
-      document.querySelectorAll(".rp-tab").forEach(function (t) {
-        t.addEventListener("click", function () {
-          document.querySelectorAll(".rp-tab").forEach(function (x) {
-            x.classList.remove("active");
-          });
-          this.classList.add("active");
-        });
-      });
-
-      // Page loader: show on every page load, hide after a short delay
-      (function () {
-        var loader = document.getElementById("page-loader");
-        function hideLoader() {
-          loader.classList.add("fade-out");
-          setTimeout(function () {
-            loader.style.display = "none";
-          }, 450);
-        }
-        if (document.readyState === "complete") {
-          setTimeout(hideLoader, 900);
-        } else {
-          window.addEventListener("load", function () {
-            setTimeout(hideLoader, 900);
-          });
-        }
-      })();
-    </script>
-  </body>
+</body>
 </html>
